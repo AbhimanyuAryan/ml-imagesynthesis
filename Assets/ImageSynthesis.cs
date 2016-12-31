@@ -3,8 +3,7 @@ using UnityEngine.Rendering;
 using System.Collections;
 using System.IO;
 
-// TODO:
-// . configurable shaders
+// @TODO:
 // . fix optical flow when image resolution is different from screen resolution
 // . support custom color wheels in optical flow via lookup textures
 // . support custom depth encoding
@@ -17,6 +16,10 @@ public class ImageSynthesis : MonoBehaviour {
 	static readonly string[] PassNames = { "_img", "_id", "_layer", "_depth", "_flow" };
 	private Camera[] captureCameras = new Camera[PassNames.Length];
 
+	public Shader colorPassShader;
+	public Shader depthPassShader;
+	public Shader opticalFlowPassShader;
+
 	void Start()
 	{
 		for (int q = 0; q < captureCameras.Length; q++)
@@ -24,14 +27,19 @@ public class ImageSynthesis : MonoBehaviour {
 
 		captureCameras[0].enabled = false;	
 
-		var shader = Shader.Find("Hidden/UniformColor");
-		SetupCameraWithReplacementShaderAndBlackBackground(captureCameras[1], shader, 0);
-		SetupCameraWithReplacementShaderAndBlackBackground(captureCameras[2], shader, 1);
+		// default fallbacks, if shaders are unspecified
+		if (!colorPassShader)
+			colorPassShader = Shader.Find("Hidden/UniformColor");
+		if (!depthPassShader)
+			depthPassShader = Shader.Find("Hidden/LinearDepth");
+		if (!opticalFlowPassShader)
+			opticalFlowPassShader = Shader.Find("Hidden/OpticalFlow");
 
-		var shader2 = Shader.Find("Hidden/LinearDepth");
-		var shader3 = Shader.Find("Hidden/OpticalFlow");
-		SetupCameraWithPostShader(captureCameras[3], shader2, DepthTextureMode.Depth);
-		SetupCameraWithPostShader(captureCameras[4], shader3, DepthTextureMode.Depth | DepthTextureMode.MotionVectors);
+		SetupCameraWithReplacementShaderAndBlackBackground(captureCameras[1], colorPassShader, 0);
+		SetupCameraWithReplacementShaderAndBlackBackground(captureCameras[2], colorPassShader, 1);
+
+		SetupCameraWithPostShader(captureCameras[3], depthPassShader, DepthTextureMode.Depth);
+		SetupCameraWithPostShader(captureCameras[4], opticalFlowPassShader, DepthTextureMode.Depth | DepthTextureMode.MotionVectors);
 
 		OnSceneChange();
 	}

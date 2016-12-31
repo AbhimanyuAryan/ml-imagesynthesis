@@ -1,10 +1,14 @@
 fileFormatVersion: 2
 guid: 6b7e9fcb795b84664bfc1ac40799a68f
-timeCreated: 1482070645
+timeCreated: 1483197398
 licenseType: Pro
 MonoImporter:
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - colorPassShader: {fileID: 4800000, guid: 84d7d92e6ae8a4e8f8c3dceaf277e044, type: 3}
+  - depthPassShader: {fileID: 4800000, guid: d45d18b2e096b41e283292c07dcdd7e9, type: 3}
+  - opticalFlowPassShader: {fileID: 4800000, guid: 2a970eca3c9e84f13b5b616e530a7919,
+      type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 
