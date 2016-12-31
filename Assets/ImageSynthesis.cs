@@ -7,6 +7,7 @@ using System.IO;
 // . configurable shaders
 // . fix optical flow when image resolution is different from screen resolution
 // . support custom color wheels in optical flow via lookup textures
+// . support custom depth encoding
 // . tests
 // . better example scene(s)
 
