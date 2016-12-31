@@ -1,5 +1,5 @@
 # Image Synthesis for Machine Learning #
-Aim is to help Machine Learning and Computer Vision researchers with generation of annotated training sets in Unity.
+Aim is to help Machine Learning and Computer Vision researchers to generate annotated training sets in Unity.
 
 ### Rationale ###
 
@@ -31,6 +31,17 @@ Data can be previewed in the Editor (in Play mode) via 'Display' drop down in th
 
 ### How does it work ###
 
+First of all `ImageSynthesis.OnSceneChange()` calls `ColorEncoding` class to encode unique object idenitifier and layer as RGB color. These colors are stored in `MaterialPropertyBlock` for each object and are automatically passed into the shaders when rendering.
+
+Upon start `ImageSynthesis` component creates hidden camera for every single pass of output data (image segmentation, optical flow, depth, etc). These cameras allow to override usual rendering of the scene and instead use custom shaders to generate the output. These cameras are attached to different displays using `Camera.targetDisplay` property - handy for preview in the Editor.
+
+For __Image segmentation__ and __Object categorization__ pass special replacement shader is set with `Camera.SetReplacementShader()`. It overrides shaders that would be otherwise used for rendering and instead outputs encoded object id or layer.
+
+__Optical flow__ and __Depth__ pass cameras request additional data to be rendered with `DepthTextureMode.Depth` and `DepthTextureMode.MotionVectors` flags. Rendering of these  cameras is followed by drawing full screen quad `CommandBuffer.Blit()` with custom shaders that convert 24/16bit-per-channel data into the 8-bit RGB encoding.
+
+Finally images are readback with `Texture.ReadPixels()` from GPU, compressed with `Texture.EncodePNG()` to PNG format and stored on disk.
+
+Related documentation: [Replacement Shaders](https://docs.unity3d.com/Manual/SL-ShaderReplacement.html), [Command Buffers](https://docs.unity3d.com/Manual/GraphicsCommandBuffers.html), [Depth and Motion Vectors](https://docs.unity3d.com/Manual/SL-CameraDepthTexture.html), [MaterialPropertyBlock](https://docs.unity3d.com/ScriptReference/MaterialPropertyBlock.html)
 
 ### To Do ###
 
