@@ -35,7 +35,7 @@ public class ColorEncoding
 		var b = (byte)(sid);
 		
 		//Debug.Log(r + " " + g + " " + b);
-		return new Color (r / 256.0f, g / 256.0f, b / 256.0f);
+		return new Color32 (r, g, b, 255);
 	}
 
 	public static Color EncodeTagAsColor(string tag)
@@ -45,7 +45,7 @@ public class ColorEncoding
 		var r = (byte)(hash >> 16);
 		var g = (byte)(hash >> 8);
 		var b = (byte)(hash);
-		return new Color (r / 256.0f, g / 256.0f, b / 256.0f, a / 256.0f);
+		return new Color32 (r, g, b, a);
 	}
 
 	public static Color EncodeLayerAsColor(int layer)
