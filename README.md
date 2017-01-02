@@ -45,7 +45,7 @@ Finally images are readback with `Texture.ReadPixels()` from GPU, compressed wit
 
 Related documentation: [Replacement Shaders](https://docs.unity3d.com/Manual/SL-ShaderReplacement.html), [Command Buffers](https://docs.unity3d.com/Manual/GraphicsCommandBuffers.html), [Depth and Motion Vectors](https://docs.unity3d.com/Manual/SL-CameraDepthTexture.html), [MaterialPropertyBlock](https://docs.unity3d.com/ScriptReference/MaterialPropertyBlock.html)
 
-### To Do ###
+### To do ###
 
 * Better example scene(s)
 * Script for deterministic playback
@@ -59,3 +59,6 @@ Related documentation: [Replacement Shaders](https://docs.unity3d.com/Manual/SL-
 
 * email: rej@unity3d.com
 * twitter: `@__ReJ__`
+
+### License ###
+This repository is covered under the [MIT/X11](LICENSE.TXT) license.
