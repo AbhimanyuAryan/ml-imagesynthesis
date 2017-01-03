@@ -17,11 +17,12 @@ This repository contains code that is easy to add to any existing Unity project.
 * __Depth__
 * *... and more in the future*
 
-![TestExample.png](https://bitbucket.org/repo/5KgjLE/images/2279499386-TestExample.png)
+![Readme_DescriptionMainImage.png](https://bitbucket.org/repo/5KgjLE/images/1913953980-Readme_DescriptionMainImage.png)
+![Readme_Description4Passes.png](https://bitbucket.org/repo/5KgjLE/images/3420646604-Readme_Description4Passes.png)
 
-Process of capturing data does not require any content modification. 
+Process of capturing data should require minimal adjustment to the content.
 
-Data can be previewed in the Editor (in Play mode) via 'Display' drop down in the Game View. 'Display 1' provides the final image as usual, while 'Display 2' to 'Display 5' - displays the additional data like image segmentation, optical flow, etc.
+Data can be previewed right inside the Editor (in Play mode) via 'Display' drop down in the Game View. 'Display 1' provides the final image as usual, while 'Display 2' to 'Display 5' - displays the additional data like image segmentation, optical flow, etc.
 
 ### How to use ###
 
