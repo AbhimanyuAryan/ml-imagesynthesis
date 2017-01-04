@@ -34,14 +34,16 @@
 				o.uv = TRANSFORM_TEX(v.uv, _CameraDepthTexture);
 				return o;
 			}
-			
+
 			sampler2D _CameraDepthTexture;
 			fixed4 frag (v2f i) : SV_Target
 			{
-				// @TODO: support other non-monochrome depth encoding
-				// (use lookup texture to convert from 16/24bit depth to 8bit RGB encoding)
 				float d = UNITY_SAMPLE_DEPTH(tex2D(_CameraDepthTexture, i.uv));
-				return fixed4(d, d, d, 1);
+				float linearZ = Linear01Depth(d);
+				
+				float lowBits = frac(linearZ * 256);
+				float highBits = linearZ - lowBits / 256;
+				return float4(lowBits, highBits, d, 1);
 			}
 			ENDCG
 		}
