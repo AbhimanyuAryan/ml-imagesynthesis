@@ -4,6 +4,8 @@ using System.Collections;
 using System.IO;
 
 // @TODO:
+// . copy from on all cameras
+// . image effects for the _img camera
 // . fix optical flow when image resolution is different from screen resolution
 // . support custom color wheels in optical flow via lookup textures
 // . support custom depth encoding
@@ -31,7 +33,7 @@ public class ImageSynthesis : MonoBehaviour {
 		if (!colorPassShader)
 			colorPassShader = Shader.Find("Hidden/UniformColor");
 		if (!depthPassShader)
-			depthPassShader = Shader.Find("Hidden/LinearDepth");
+			depthPassShader = Shader.Find("Hidden/CompressedDepth");
 		if (!opticalFlowPassShader)
 			opticalFlowPassShader = Shader.Find("Hidden/OpticalFlow");
 
