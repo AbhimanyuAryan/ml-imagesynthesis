@@ -4,8 +4,6 @@ using System.Collections;
 using System.IO;
 
 // @TODO:
-// . image effects for the _img camera
-// . fix optical flow when image resolution is different from screen resolution
 // . support custom color wheels in optical flow via lookup textures
 // . support custom depth encoding
 // . tests
@@ -79,7 +77,8 @@ public class ImageSynthesis : MonoBehaviour {
 		{
 			// copy all camera parameters
 			cam.CopyFrom(GetComponent<Camera>());
-			// set targetDisplay - it gets overriden by CopyFrom()
+
+			// set targetDisplay here since it gets overriden by CopyFrom()
 			cam.targetDisplay = targetDisplay++;
 		}
 
@@ -127,57 +126,47 @@ public class ImageSynthesis : MonoBehaviour {
 
 	private void Save(string filenameWithoutExtension, string filenameExtension, int width, int height)
 	{
-		var rt = RenderTexture.GetTemporary(width, height, 24);
+		var mainCamera = GetComponent<Camera>();
+		Save(mainCamera, filenameWithoutExtension + PassNames[0] + filenameExtension, width, height);
+
+		foreach (var cam in captureCameras)
+			Save(cam, filenameWithoutExtension + cam.name + filenameExtension, width, height);
+	}
+
+	private void Save(Camera cam, string filename, int width, int height)
+	{
+		var mainCamera = GetComponent<Camera>();
+		var renderRT = RenderTexture.GetTemporary(mainCamera.pixelWidth, mainCamera.pixelHeight, 24);
+	
+		var saveRT = RenderTexture.GetTemporary(width, height, 24);
 		var tex = new Texture2D(width, height, TextureFormat.RGB24, false);
 
 		var prevActiveRT = RenderTexture.active;
-		RenderTexture.active = rt;
+		var prevCameraRT = cam.targetTexture;
 
-		var imgCamera = GetComponent<Camera>();
-		RenderCameraAndSaveToDisk(imgCamera, rt, tex, filenameWithoutExtension + PassNames[0] + filenameExtension);
-
-		foreach (var cam in captureCameras)
-		{
-			RenderCameraAndSaveToDisk(cam, rt, tex, filenameWithoutExtension + cam.name + filenameExtension);
-			/*
-			// Render to offscreen texture (readonly from CPU side)
-			cam.targetTexture = rt;
-			cam.Render();
-
-			// Read offsreen texture contents into the CPU readable texture
-			tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-			tex.Apply();
-
-			// Encode texture into PNG
-			var bytes = tex.EncodeToPNG();
-			File.WriteAllBytes(filenameWithoutExtension + cam.name + filenameExtension, bytes);					
-
-			cam.targetTexture = null;*/
-		}
-
-		Object.Destroy(tex);
-
-		RenderTexture.active = prevActiveRT;
-		RenderTexture.ReleaseTemporary(rt);
-	}
-
-	static private void RenderCameraAndSaveToDisk(Camera cam, RenderTexture rt, Texture2D tex, string filename)
-	{
-		var prevRT = cam.targetTexture;
-
-		// Render to offscreen texture (readonly from CPU side)
-		cam.targetTexture = rt;
+		// render to offscreen texture (readonly from CPU side)
+		RenderTexture.active = renderRT;
+		cam.targetTexture = renderRT;
 		cam.Render();
 
-		// Read offsreen texture contents into the CPU readable texture
-		tex.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+		// blit to rescale
+		RenderTexture.active = saveRT;
+		Graphics.Blit(renderRT, saveRT);
+
+		// read offsreen texture contents into the CPU readable texture
+		tex.ReadPixels(new Rect(0, 0, tex.width, tex.height), 0, 0);
 		tex.Apply();
 
-		// Encode texture into PNG
+		// encode texture into PNG
 		var bytes = tex.EncodeToPNG();
 		File.WriteAllBytes(filename, bytes);					
 
-		cam.targetTexture = prevRT;
-	}
+		// restore state and cleanup
+		cam.targetTexture = prevCameraRT;
+		RenderTexture.active = prevActiveRT;
 
+		Object.Destroy(tex);
+		RenderTexture.ReleaseTemporary(renderRT);
+		RenderTexture.ReleaseTemporary(saveRT);
+	}
 }
