@@ -4,7 +4,6 @@ using System.Collections;
 using System.IO;
 
 // @TODO:
-// . copy from on all cameras
 // . image effects for the _img camera
 // . fix optical flow when image resolution is different from screen resolution
 // . support custom color wheels in optical flow via lookup textures
@@ -16,7 +15,7 @@ using System.IO;
 public class ImageSynthesis : MonoBehaviour {
 	
 	static readonly string[] PassNames = { "_img", "_id", "_layer", "_depth", "_flow" };
-	private Camera[] captureCameras = new Camera[PassNames.Length];
+	private Camera[] captureCameras = new Camera[PassNames.Length - 1];
 
 	public Shader colorPassShader;
 	public Shader depthPassShader;
@@ -24,11 +23,6 @@ public class ImageSynthesis : MonoBehaviour {
 
 	void Start()
 	{
-		for (int q = 0; q < captureCameras.Length; q++)
-			captureCameras[q] = CreateHiddenCamera (PassNames[q], q);
-
-		captureCameras[0].enabled = false;	
-
 		// default fallbacks, if shaders are unspecified
 		if (!colorPassShader)
 			colorPassShader = Shader.Find("Hidden/UniformColor");
@@ -37,11 +31,8 @@ public class ImageSynthesis : MonoBehaviour {
 		if (!opticalFlowPassShader)
 			opticalFlowPassShader = Shader.Find("Hidden/OpticalFlow");
 
-		SetupCameraWithReplacementShaderAndBlackBackground(captureCameras[1], colorPassShader, 0);
-		SetupCameraWithReplacementShaderAndBlackBackground(captureCameras[2], colorPassShader, 1);
-
-		SetupCameraWithPostShader(captureCameras[3], depthPassShader, DepthTextureMode.Depth);
-		SetupCameraWithPostShader(captureCameras[4], opticalFlowPassShader, DepthTextureMode.Depth | DepthTextureMode.MotionVectors);
+		for (int q = 0; q < captureCameras.Length; q++)
+			captureCameras[q] = CreateHiddenCamera (PassNames[q + 1]);
 
 		OnCameraChange();
 		OnSceneChange();
@@ -52,15 +43,13 @@ public class ImageSynthesis : MonoBehaviour {
 		OnCameraChange();
 	}
 	
-	private Camera CreateHiddenCamera(string name, int targetDisplay)
+	private Camera CreateHiddenCamera(string name)
 	{
 		var go = new GameObject (name, typeof (Camera));
-		go.hideFlags = HideFlags.HideAndDontSave;;
+		go.hideFlags = HideFlags.HideAndDontSave;
 		go.transform.parent = transform;
 
 		var newCamera = go.GetComponent<Camera>();
-		newCamera.targetDisplay = targetDisplay;
-
 		return newCamera;
 	}
 
@@ -85,14 +74,21 @@ public class ImageSynthesis : MonoBehaviour {
 
 	public void OnCameraChange()
 	{
+		int targetDisplay = 1;
 		foreach (var cam in captureCameras)
 		{
-			// remember target display
-			var targetDisplay = cam.targetDisplay;
-			// copy all other camera parameters
+			// copy all camera parameters
 			cam.CopyFrom(GetComponent<Camera>());
-			cam.targetDisplay = targetDisplay;
-		}		
+			// set targetDisplay - it gets overriden by CopyFrom()
+			cam.targetDisplay = targetDisplay++;
+		}
+
+		// setup command buffers and replacement shaders
+		SetupCameraWithReplacementShaderAndBlackBackground(captureCameras[0], colorPassShader, 0);
+		SetupCameraWithReplacementShaderAndBlackBackground(captureCameras[1], colorPassShader, 1);
+
+		SetupCameraWithPostShader(captureCameras[2], depthPassShader, DepthTextureMode.Depth);
+		SetupCameraWithPostShader(captureCameras[3], opticalFlowPassShader, DepthTextureMode.Depth | DepthTextureMode.MotionVectors);
 	}
 
 	public void OnSceneChange()
@@ -137,8 +133,13 @@ public class ImageSynthesis : MonoBehaviour {
 		var prevActiveRT = RenderTexture.active;
 		RenderTexture.active = rt;
 
+		var imgCamera = GetComponent<Camera>();
+		RenderCameraAndSaveToDisk(imgCamera, rt, tex, filenameWithoutExtension + PassNames[0] + filenameExtension);
+
 		foreach (var cam in captureCameras)
 		{
+			RenderCameraAndSaveToDisk(cam, rt, tex, filenameWithoutExtension + cam.name + filenameExtension);
+			/*
 			// Render to offscreen texture (readonly from CPU side)
 			cam.targetTexture = rt;
 			cam.Render();
@@ -151,7 +152,7 @@ public class ImageSynthesis : MonoBehaviour {
 			var bytes = tex.EncodeToPNG();
 			File.WriteAllBytes(filenameWithoutExtension + cam.name + filenameExtension, bytes);					
 
-			cam.targetTexture = null;
+			cam.targetTexture = null;*/
 		}
 
 		Object.Destroy(tex);
@@ -159,4 +160,24 @@ public class ImageSynthesis : MonoBehaviour {
 		RenderTexture.active = prevActiveRT;
 		RenderTexture.ReleaseTemporary(rt);
 	}
+
+	static private void RenderCameraAndSaveToDisk(Camera cam, RenderTexture rt, Texture2D tex, string filename)
+	{
+		var prevRT = cam.targetTexture;
+
+		// Render to offscreen texture (readonly from CPU side)
+		cam.targetTexture = rt;
+		cam.Render();
+
+		// Read offsreen texture contents into the CPU readable texture
+		tex.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+		tex.Apply();
+
+		// Encode texture into PNG
+		var bytes = tex.EncodeToPNG();
+		File.WriteAllBytes(filename, bytes);					
+
+		cam.targetTexture = prevRT;
+	}
+
 }
