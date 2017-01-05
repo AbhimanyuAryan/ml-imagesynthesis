@@ -43,7 +43,13 @@ public class ImageSynthesis : MonoBehaviour {
 		SetupCameraWithPostShader(captureCameras[3], depthPassShader, DepthTextureMode.Depth);
 		SetupCameraWithPostShader(captureCameras[4], opticalFlowPassShader, DepthTextureMode.Depth | DepthTextureMode.MotionVectors);
 
+		OnCameraChange();
 		OnSceneChange();
+	}
+
+	void LateUpdate()
+	{
+		OnCameraChange();
 	}
 	
 	private Camera CreateHiddenCamera(string name, int targetDisplay)
@@ -53,7 +59,6 @@ public class ImageSynthesis : MonoBehaviour {
 		go.transform.parent = transform;
 
 		var newCamera = go.GetComponent<Camera>();
-		newCamera.CopyFrom(GetComponent<Camera>());
 		newCamera.targetDisplay = targetDisplay;
 
 		return newCamera;
@@ -76,6 +81,18 @@ public class ImageSynthesis : MonoBehaviour {
 		cb.Blit(null, BuiltinRenderTextureType.CurrentActive, new Material(shader));
 		cam.AddCommandBuffer(CameraEvent.AfterEverything, cb);
 		cam.depthTextureMode = depthTextureMode;
+	}
+
+	public void OnCameraChange()
+	{
+		foreach (var cam in captureCameras)
+		{
+			// remember target display
+			var targetDisplay = cam.targetDisplay;
+			// copy all other camera parameters
+			cam.CopyFrom(GetComponent<Camera>());
+			cam.targetDisplay = targetDisplay;
+		}		
 	}
 
 	public void OnSceneChange()
