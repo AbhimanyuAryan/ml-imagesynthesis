@@ -10,12 +10,20 @@ public class ExampleUI : MonoBehaviour {
 	public int height = 200;
 	private int imageCounter = 1;
 
+	private bool requestFrameCapture = false;
 	void OnGUI ()
 	{
 		 if (GUILayout.Button("Captcha!!! (" + imageCounter + ")"))
-		 {
+		 	requestFrameCapture = true;
+	}
+
+	void LateUpdate()
+	{
+		if (requestFrameCapture)
+		{
 		 	var sceneName = SceneManager.GetActiveScene().name;
 		 	GetComponent<ImageSynthesis>().Save(sceneName + "_" + imageCounter++, width, height);
-		 }
+		 	requestFrameCapture = false;			
+		}
 	}
 }
