@@ -6,9 +6,18 @@ using System.IO;
 // @TODO:
 // . support custom color wheels in optical flow via lookup textures
 // . support custom depth encoding
+// . support multiple overlay cameras
 // . tests
 // . better example scene(s)
 
+// @KNOWN ISSUES
+// . There are 2 issues when Motion Vectors produce incorrect results in Unity 5.5.f3:
+//    1) Rendering several cameras with diffeerent aspect ratios results in errorneous motion vectors
+//		 - vectors stretch to the sides of the screen
+//    2) Camera's and object's frame-to-frame motion vector is calculated somewhere after Update() and
+//		 before LateUpdate(), NOT at the beginng of the frame - calling Camera.Render() too early in the frame
+//		 results in uniform "no motion" buffer
+// . Depth is not anti-aliased atlhough the main image is.
 [RequireComponent (typeof(Camera))]
 public class ImageSynthesis : MonoBehaviour {
 	

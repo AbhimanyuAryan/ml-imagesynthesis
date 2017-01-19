@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.SceneManagement;
 using UnityEngine;
@@ -22,6 +22,8 @@ public class ExampleUI : MonoBehaviour {
 		if (requestFrameCapture)
 		{
 		 	var sceneName = SceneManager.GetActiveScene().name;
+		 	// NOTE: due to per-camera / per-object motion being calculated late in the frame and after Update()
+		 	// capturing is moved into LateUpdate (see ImageSynthesis.cs Known Issues)
 		 	GetComponent<ImageSynthesis>().Save(sceneName + "_" + imageCounter++, width, height);
 		 	requestFrameCapture = false;			
 		}
