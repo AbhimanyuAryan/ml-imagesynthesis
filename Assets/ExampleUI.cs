@@ -13,19 +13,19 @@ public class ExampleUI : MonoBehaviour {
 	private bool requestFrameCapture = false;
 	void OnGUI ()
 	{
-		 if (GUILayout.Button("Captcha!!! (" + imageCounter + ")"))
-		 	requestFrameCapture = true;
+		if (GUILayout.Button("Captcha!!! (" + imageCounter + ")"))
+			requestFrameCapture = true;
 	}
 
 	void LateUpdate()
 	{
 		if (requestFrameCapture)
 		{
-		 	var sceneName = SceneManager.GetActiveScene().name;
-		 	// NOTE: due to per-camera / per-object motion being calculated late in the frame and after Update()
-		 	// capturing is moved into LateUpdate (see ImageSynthesis.cs Known Issues)
-		 	GetComponent<ImageSynthesis>().Save(sceneName + "_" + imageCounter++, width, height);
-		 	requestFrameCapture = false;			
+			var sceneName = SceneManager.GetActiveScene().name;
+			// NOTE: due to per-camera / per-object motion being calculated late in the frame and after Update()
+			// capturing is moved into LateUpdate (see ImageSynthesis.cs Known Issues)
+			GetComponent<ImageSynthesis>().Save(sceneName + "_" + imageCounter++, width, height);
+			requestFrameCapture = false;			
 		}
 	}
 }
