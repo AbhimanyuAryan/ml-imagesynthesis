@@ -11,13 +11,10 @@ using System.IO;
 // . better example scene(s)
 
 // @KNOWN ISSUES
-// . There are 2 issues when Motion Vectors produce incorrect results in Unity 5.5.f3:
-//    1) Rendering several cameras with diffeerent aspect ratios results in errorneous motion vectors
-//		 - vectors stretch to the sides of the screen
-//    2) Camera's and object's frame-to-frame motion vector is calculated somewhere after Update() and
-//		 before LateUpdate(), NOT at the beginng of the frame - calling Camera.Render() too early in the frame
-//		 results in uniform "no motion" buffer
+// . Motion Vectors can produce incorrect results in Unity 5.5.f3 when
+// 	  rendering several cameras with different aspect ratios - vectors stretch to the sides of the screen
 // . Depth is not anti-aliased atlhough the main image is.
+
 [RequireComponent (typeof(Camera))]
 public class ImageSynthesis : MonoBehaviour {
 	
@@ -130,7 +127,15 @@ public class ImageSynthesis : MonoBehaviour {
 
 		var pathWithoutExtension = Path.Combine(path, filenameWithoutExtension);
 
-		Save(pathWithoutExtension, filenameExtension, width, height);
+		// execute as coroutine to wait for the EndOfFrame before starting capture
+		StartCoroutine(
+			WaitForEndOfFrameAndSave(pathWithoutExtension, filenameExtension, width, height));
+	}
+
+	private IEnumerator WaitForEndOfFrameAndSave(string filenameWithoutExtension, string filenameExtension, int width, int height)
+	{
+		yield return new WaitForEndOfFrame();
+		Save(filenameWithoutExtension, filenameExtension, width, height);
 	}
 
 	private void Save(string filenameWithoutExtension, string filenameExtension, int width, int height)
@@ -158,7 +163,7 @@ public class ImageSynthesis : MonoBehaviour {
 		cam.targetTexture = renderRT;
 		cam.Render();
 
-		// blit to rescale
+		// blit to rescale (see issue with Motion Vectors in @KNOWN ISSUES)
 		RenderTexture.active = saveRT;
 		Graphics.Blit(renderRT, saveRT);
 
