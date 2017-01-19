@@ -81,7 +81,10 @@ public class ImageSynthesis : MonoBehaviour {
 		int targetDisplay = 1;
 		foreach (var cam in captureCameras)
 		{
-			// copy all camera parameters
+			// cleanup capturing camera
+			cam.RemoveAllCommandBuffers();
+
+			// copy all "main" camera parameters into capturing camera
 			cam.CopyFrom(GetComponent<Camera>());
 
 			// set targetDisplay here since it gets overriden by CopyFrom()
