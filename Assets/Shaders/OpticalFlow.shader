@@ -1,5 +1,9 @@
 ﻿Shader "Hidden/OpticalFlow"
 {
+	Properties
+	{
+		_Sensitivity("Sensitivity", Float) = 1
+	}
 	SubShader
 	{
 		// No culling or depth
@@ -50,6 +54,7 @@
 			    return float3(((Hue(HSV.x) - 1) * HSV.y + 1) * HSV.z);
 			}
 
+			float _Sensitivity;
 			float3 MotionVectorsToOpticalFlow(float2 motion)
 			{
 				// Currently is based on HSV encoding from:
@@ -65,8 +70,8 @@
 				// some MATLAB code: https://github.com/suhangpro/epicflow/blob/master/utils/flow-code-matlab/computeColor.m
 
 				float angle = atan2(-motion.y, -motion.x);
-				float hue = angle / (UNITY_PI * 2.0) + 0.5; // convert motion angle to Hue
-				float value = length(motion);  				// convert motion strength to Value
+				float hue = angle / (UNITY_PI * 2.0) + 0.5;		// convert motion angle to Hue
+				float value = length(motion) * _Sensitivity;  	// convert motion strength to Value
     			return HSVtoRGB(float3(hue, 1, value));		// HSV -> RGB
 			}
 

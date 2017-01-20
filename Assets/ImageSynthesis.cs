@@ -25,6 +25,12 @@ public class ImageSynthesis : MonoBehaviour {
 	public Shader depthPassShader;
 	public Shader opticalFlowPassShader;
 
+	public float opticalFlowSensitivity = 1.0f;
+
+	// cached materials
+	private Material depthPassMaterial;
+	private Material opticalFlowPassMaterial;
+
 	void Start()
 	{
 		// default fallbacks, if shaders are unspecified
@@ -68,10 +74,10 @@ public class ImageSynthesis : MonoBehaviour {
 		cam.clearFlags = CameraClearFlags.SolidColor;
 	}
 
-	static private void SetupCameraWithPostShader(Camera cam, Shader shader, DepthTextureMode depthTextureMode)
+	static private void SetupCameraWithPostShader(Camera cam, Material material, DepthTextureMode depthTextureMode)
 	{
 		var cb = new CommandBuffer();
-		cb.Blit(null, BuiltinRenderTextureType.CurrentActive, new Material(shader));
+		cb.Blit(null, BuiltinRenderTextureType.CurrentActive, material);
 		cam.AddCommandBuffer(CameraEvent.AfterEverything, cb);
 		cam.depthTextureMode = depthTextureMode;
 	}
@@ -91,12 +97,20 @@ public class ImageSynthesis : MonoBehaviour {
 			cam.targetDisplay = targetDisplay++;
 		}
 
+		// cache materials and setup material properties
+		if (!depthPassMaterial || depthPassMaterial.shader != depthPassShader)
+			depthPassMaterial = new Material(depthPassShader);
+
+		if (!opticalFlowPassMaterial || opticalFlowPassMaterial.shader != opticalFlowPassShader)
+			opticalFlowPassMaterial = new Material(opticalFlowPassShader);
+		opticalFlowPassMaterial.SetFloat("_Sensitivity", opticalFlowSensitivity);
+
 		// setup command buffers and replacement shaders
 		SetupCameraWithReplacementShaderAndBlackBackground(captureCameras[0], colorPassShader, 0);
 		SetupCameraWithReplacementShaderAndBlackBackground(captureCameras[1], colorPassShader, 1);
 
-		SetupCameraWithPostShader(captureCameras[2], depthPassShader, DepthTextureMode.Depth);
-		SetupCameraWithPostShader(captureCameras[3], opticalFlowPassShader, DepthTextureMode.Depth | DepthTextureMode.MotionVectors);
+		SetupCameraWithPostShader(captureCameras[2], depthPassMaterial, DepthTextureMode.Depth);
+		SetupCameraWithPostShader(captureCameras[3], opticalFlowPassMaterial, DepthTextureMode.Depth | DepthTextureMode.MotionVectors);
 	}
 
 	public void OnSceneChange()
