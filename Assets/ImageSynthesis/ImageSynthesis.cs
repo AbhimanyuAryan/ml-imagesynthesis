@@ -48,35 +48,11 @@ public class ImageSynthesis : MonoBehaviour {
 		OnSceneChange();
 	}
 
-	#if UNITY_EDITOR
-	private GameObject lastSelectedGO;
-	private int lastSelectedGOLayer = -1;
-	private string lastSelectedGOTag = "unknown";
-	#endif // UNITY_EDITOR
 	void LateUpdate()
 	{
-
 		#if UNITY_EDITOR
-		// detect potential changes to layers/tags in Inspector in the Editor during play mode
-		if (UnityEditor.Selection.transforms.Length > 1)
-		{
-			// Multiple objects are selected, all bets are off
-			// Lets assume these objects are being edited
+		if (DetectPotentialSceneChangeInEditor())
 			OnSceneChange();
-			lastSelectedGO = null;
-		}
-		else if (UnityEditor.Selection.activeGameObject)
-		{
-			var go = UnityEditor.Selection.activeGameObject;
-			// check if layer/tag of a selected object have changed since the last frame
-			var potentialChangeHappened = lastSelectedGOLayer != go.layer || lastSelectedGOTag != go.tag;
-			if (go == lastSelectedGO && potentialChangeHappened)
-				OnSceneChange();
-
-			lastSelectedGO = go;
-			lastSelectedGOLayer = go.layer;
-			lastSelectedGOTag = go.tag;
-		}
 		#endif // UNITY_EDITOR
 
 		// @TODO: detect if camera properties actually changed
@@ -230,4 +206,38 @@ public class ImageSynthesis : MonoBehaviour {
 		RenderTexture.ReleaseTemporary(renderRT);
 		RenderTexture.ReleaseTemporary(saveRT);
 	}
+
+	#if UNITY_EDITOR
+	private GameObject lastSelectedGO;
+	private int lastSelectedGOLayer = -1;
+	private string lastSelectedGOTag = "unknown";
+	private bool DetectPotentialSceneChangeInEditor()
+	{
+		bool change = false;
+		// there is no callback in Unity Editor to automatically detect changes in scene objects
+		// as a workaround lets track selected objects and check, if properties that are 
+		// interesting for us (layer or tag) did not change since the last frame
+		if (UnityEditor.Selection.transforms.Length > 1)
+		{
+			// multiple objects are selected, all bets are off!
+			// we have to assume these objects are being edited
+			change = true;
+			lastSelectedGO = null;
+		}
+		else if (UnityEditor.Selection.activeGameObject)
+		{
+			var go = UnityEditor.Selection.activeGameObject;
+			// check if layer or tag of a selected object have changed since the last frame
+			var potentialChangeHappened = lastSelectedGOLayer != go.layer || lastSelectedGOTag != go.tag;
+			if (go == lastSelectedGO && potentialChangeHappened)
+				change = true;
+
+			lastSelectedGO = go;
+			lastSelectedGOLayer = go.layer;
+			lastSelectedGOTag = go.tag;
+		}
+
+		return change;
+	}
+	#endif // UNITY_EDITOR
 }
