@@ -12,7 +12,8 @@ using System.IO;
 
 // @KNOWN ISSUES
 // . Motion Vectors can produce incorrect results in Unity 5.5.f3 when
-// 	  rendering several cameras with different aspect ratios - vectors stretch to the sides of the screen
+//      1) during the first rendering frame
+//      2) rendering several cameras with different aspect ratios - vectors do stretch to the sides of the screen
 // . Depth is not anti-aliased atlhough the main image is.
 
 [RequireComponent (typeof(Camera))]
