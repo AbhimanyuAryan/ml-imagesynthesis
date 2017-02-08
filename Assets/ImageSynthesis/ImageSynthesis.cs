@@ -48,8 +48,38 @@ public class ImageSynthesis : MonoBehaviour {
 		OnSceneChange();
 	}
 
+	#if UNITY_EDITOR
+	private GameObject lastSelectedGO;
+	private int lastSelectedGOLayer = -1;
+	private string lastSelectedGOTag = "unknown";
+	#endif // UNITY_EDITOR
 	void LateUpdate()
 	{
+
+		#if UNITY_EDITOR
+		// detect potential changes to layers/tags in Inspector in the Editor during play mode
+		if (UnityEditor.Selection.transforms.Length > 1)
+		{
+			// Multiple objects are selected, all bets are off
+			// Lets assume these objects are being edited
+			OnSceneChange();
+			lastSelectedGO = null;
+		}
+		else if (UnityEditor.Selection.activeGameObject)
+		{
+			var go = UnityEditor.Selection.activeGameObject;
+			// check if layer/tag of a selected object have changed since the last frame
+			var potentialChangeHappened = lastSelectedGOLayer != go.layer || lastSelectedGOTag != go.tag;
+			if (go == lastSelectedGO && potentialChangeHappened)
+				OnSceneChange();
+
+			lastSelectedGO = go;
+			lastSelectedGOLayer = go.layer;
+			lastSelectedGOTag = go.tag;
+		}
+		#endif // UNITY_EDITOR
+
+		// @TODO: detect if camera properties actually changed
 		OnCameraChange();
 	}
 	
