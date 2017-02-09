@@ -1,5 +1,5 @@
 # Image Synthesis for Machine Learning #
-Aim is to help Machine Learning and Computer Vision researchers to generate annotated training sets in Unity.
+Aim is to help Machine Learning and Computer Vision researchers to generate annotated training sets in Unity and [on the Cloud](../../wiki/AWS).
 
 ### Rationale ###
 
@@ -9,7 +9,7 @@ Virtual worlds can provide a wealth of training data. However it must consist of
 
 ### What does it do? ###
 
-This repository contains code that is easy to add to any existing Unity project. It allows to capture image depth, segmentation, optical flow, etc as .png images with minimal intrusion:
+This repository contains code that is [easy to add to any existing Unity project](../../wiki/Installation). It allows to capture image depth, segmentation, optical flow, etc as .png images with minimal intrusion:
 
 * __Image segmentation__ - each object in the scene gets unique color
 * __Object categorization__ - objects are assigned color based on their category
@@ -21,11 +21,19 @@ This repository contains code that is easy to add to any existing Unity project.
 ![Readme_DescriptionMainImage.png](https://bitbucket.org/repo/5KgjLE/images/1913953980-Readme_DescriptionMainImage.png)
 ![Readme_Description4Passes.png](https://bitbucket.org/repo/5KgjLE/images/3420646604-Readme_Description4Passes.png)
 
+### Wiki ###
+* [How to use it in the existing project](../../wiki/Installation)
+* [How does it work](../../wiki/Implementation)
+* [Render images on Amazon Cloud (AWS)](../../wiki/AWS)
+* [ToDo list](../../wiki/Roadmap)
 
 ### Who do I talk to? ###
-
 * email: rej@unity3d.com
 * twitter: `@__ReJ__`
+
+### Requirements ###
+* Unity *5.5.0* or later
+* Should work on any OS officially supported by Unity
 
 ### License ###
 This repository is covered under the [MIT/X11](LICENSE.TXT) license.
