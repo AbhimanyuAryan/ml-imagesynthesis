@@ -27,7 +27,7 @@ public class ImageSynthesis : MonoBehaviour {
 		Normals				= 4
 	};
 	
-	static readonly string[] PassNames = { "_img", "_id", "_layer", "_depth", "_flow", "_normals" };
+	static readonly string[] PassNames = { "_img", "_id", "_layer", "_depth", "_normals", "_flow" };
 	private Camera[] captureCameras = new Camera[PassNames.Length - 1];
 
 	public Shader uberReplacementShader;
