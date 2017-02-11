@@ -38,6 +38,11 @@ float4 Output(float depth01, float3 normal)
 	}
 	else if (_Source == 2)
 	{
+		/*
+		float lowBits = frac(depth01 * 256);
+		float highBits = depth01 - lowBits / 256;
+		return float4(lowBits, highBits, depth01, 1);
+		*/
 		float linearZFromNear = Linear01FromEyeToLinear01FromNear(depth01); 
 		float k = 0.25; // compression factor
 		return pow(linearZFromNear, k);

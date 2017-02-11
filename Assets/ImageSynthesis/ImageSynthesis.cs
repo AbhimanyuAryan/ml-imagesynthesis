@@ -23,15 +23,12 @@ public class ImageSynthesis : MonoBehaviour {
 	private Camera[] captureCameras = new Camera[PassNames.Length - 1];
 
 	public Shader uberReplacementShader;
-	public Shader colorPassShader;
-	public Shader depthPassShader;
-	public Shader opticalFlowPassShader;
+	public Shader opticalFlowShader;
 
 	public float opticalFlowSensitivity = 1.0f;
 
 	// cached materials
-	private Material depthPassMaterial;
-	private Material opticalFlowPassMaterial;
+	private Material opticalFlowMaterial;
 
 	void Start()
 	{
@@ -39,12 +36,8 @@ public class ImageSynthesis : MonoBehaviour {
 		if (!uberReplacementShader)
 			uberReplacementShader = Shader.Find("Hidden/UberReplacement");
 
-		if (!colorPassShader)
-			colorPassShader = Shader.Find("Hidden/UniformColor");
-		if (!depthPassShader)
-			depthPassShader = Shader.Find("Hidden/CompressedDepth");
-		if (!opticalFlowPassShader)
-			opticalFlowPassShader = Shader.Find("Hidden/OpticalFlow");
+		if (!opticalFlowShader)
+			opticalFlowShader = Shader.Find("Hidden/OpticalFlow");
 
 		for (int q = 0; q < captureCameras.Length; q++)
 			captureCameras[q] = CreateHiddenCamera (PassNames[q + 1]);
@@ -115,26 +108,16 @@ public class ImageSynthesis : MonoBehaviour {
 		}
 
 		// cache materials and setup material properties
-		if (!depthPassMaterial || depthPassMaterial.shader != depthPassShader)
-			depthPassMaterial = new Material(depthPassShader);
-
-		if (!opticalFlowPassMaterial || opticalFlowPassMaterial.shader != opticalFlowPassShader)
-			opticalFlowPassMaterial = new Material(opticalFlowPassShader);
-		opticalFlowPassMaterial.SetFloat("_Sensitivity", opticalFlowSensitivity);
+		if (!opticalFlowMaterial || opticalFlowMaterial.shader != opticalFlowShader)
+			opticalFlowMaterial = new Material(opticalFlowShader);
+		opticalFlowMaterial.SetFloat("_Sensitivity", opticalFlowSensitivity);
 
 		// setup command buffers and replacement shaders
-		//SetupCameraWithReplacementShaderAndBlackBackground(captureCameras[0], colorPassShader, 0);
-		//SetupCameraWithReplacementShaderAndBlackBackground(captureCameras[1], colorPassShader, 1);
 		SetupCameraWithReplacementShader(captureCameras[0], uberReplacementShader, 0);
 		SetupCameraWithReplacementShader(captureCameras[1], uberReplacementShader, 1);
-
-		//SetupCameraWithPostShader(captureCameras[2], depthPassMaterial, DepthTextureMode.Depth);
-		//SetupCameraWithPostShader(captureCameras[2], depthPassMaterial, DepthTextureMode.DepthNormals);
 		SetupCameraWithReplacementShader(captureCameras[2], uberReplacementShader, 2, Color.white);
-		SetupCameraWithPostShader(captureCameras[3], depthPassMaterial, DepthTextureMode.Depth);
-		//SetupCameraWithPostShader(captureCameras[3], opticalFlowPassMaterial, DepthTextureMode.Depth | DepthTextureMode.MotionVectors);
-
-		SetupCameraWithReplacementShader(captureCameras[4], uberReplacementShader, 3);
+		SetupCameraWithReplacementShader(captureCameras[3], uberReplacementShader, 3);
+		SetupCameraWithPostShader(captureCameras[4], opticalFlowMaterial,DepthTextureMode.Depth | DepthTextureMode.MotionVectors);
 	}
 
 
