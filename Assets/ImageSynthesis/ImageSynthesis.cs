@@ -19,9 +19,11 @@ using System.IO;
 [RequireComponent (typeof(Camera))]
 public class ImageSynthesis : MonoBehaviour {
 	
-	static readonly string[] PassNames = { "_img", "_id", "_layer", "_depth", "_flow" };
+	static readonly string[] PassNames = { "_img", "_id", "_layer", "_depth", "_flow", "_depthnorm" };
 	private Camera[] captureCameras = new Camera[PassNames.Length - 1];
 
+	private Shader depthNormalsShader;
+	public Shader uberReplacementShader;
 	public Shader colorPassShader;
 	public Shader depthPassShader;
 	public Shader opticalFlowPassShader;
@@ -35,6 +37,12 @@ public class ImageSynthesis : MonoBehaviour {
 	void Start()
 	{
 		// default fallbacks, if shaders are unspecified
+		if (!uberReplacementShader)
+			uberReplacementShader = Shader.Find("Hidden/UberReplacement");
+
+		depthNormalsShader = GraphicsSettings.GetCustomShader(BuiltinShaderType.DepthNormals);
+		if (!depthNormalsShader)
+			depthNormalsShader = Shader.Find("Hidden/Internal-DepthNormalsTexture");
 		if (!colorPassShader)
 			colorPassShader = Shader.Find("Hidden/UniformColor");
 		if (!depthPassShader)
@@ -58,6 +66,8 @@ public class ImageSynthesis : MonoBehaviour {
 
 		// @TODO: detect if camera properties actually changed
 		OnCameraChange();
+
+		RenderCustomDepthNormals();
 	}
 	
 	private Camera CreateHiddenCamera(string name)
@@ -70,23 +80,36 @@ public class ImageSynthesis : MonoBehaviour {
 		return newCamera;
 	}
 
-	static private void SetupCameraWithReplacementShaderAndBlackBackground(Camera cam, Shader shader, int source)
+
+	static private void SetupCameraWithReplacementShader(Camera cam, Shader shader, int source = 0)
+	{
+		SetupCameraWithReplacementShader(cam, shader, source, Color.black);
+	}
+
+	static private void SetupCameraWithReplacementShader(Camera cam, Shader shader, int source, Color clearColor)
 	{
 		var cb = new CommandBuffer();
 		cb.SetGlobalFloat("_Source", source); // @TODO: CommandBuffer is missing SetGlobalInt() method
+		//cb.SetGlobalFloat("_ReplacementMode", source); // @TODO: CommandBuffer is missing SetGlobalInt() method
 		cam.AddCommandBuffer(CameraEvent.BeforeForwardOpaque, cb);
 		cam.AddCommandBuffer(CameraEvent.BeforeFinalPass, cb);
 		cam.SetReplacementShader(shader, "");
-		cam.backgroundColor = Color.black;
+		cam.backgroundColor = clearColor;
 		cam.clearFlags = CameraClearFlags.SolidColor;
 	}
 
-	static private void SetupCameraWithPostShader(Camera cam, Material material, DepthTextureMode depthTextureMode)
+	static private void SetupCameraWithPostShader(Camera cam, Material material, DepthTextureMode depthTextureMode = DepthTextureMode.None)
 	{
 		var cb = new CommandBuffer();
 		cb.Blit(null, BuiltinRenderTextureType.CurrentActive, material);
 		cam.AddCommandBuffer(CameraEvent.AfterEverything, cb);
 		cam.depthTextureMode = depthTextureMode;
+	}
+
+	static private void SetupCameraWithReplacementAndPostShader(Camera cam, Material postPass, Shader replacement)
+	{
+		SetupCameraWithReplacementShader(cam, replacement, 0);
+		SetupCameraWithPostShader(cam, postPass);
 	}
 
 	public void OnCameraChange()
@@ -113,12 +136,24 @@ public class ImageSynthesis : MonoBehaviour {
 		opticalFlowPassMaterial.SetFloat("_Sensitivity", opticalFlowSensitivity);
 
 		// setup command buffers and replacement shaders
-		SetupCameraWithReplacementShaderAndBlackBackground(captureCameras[0], colorPassShader, 0);
-		SetupCameraWithReplacementShaderAndBlackBackground(captureCameras[1], colorPassShader, 1);
+		//SetupCameraWithReplacementShaderAndBlackBackground(captureCameras[0], colorPassShader, 0);
+		//SetupCameraWithReplacementShaderAndBlackBackground(captureCameras[1], colorPassShader, 1);
+		SetupCameraWithReplacementShader(captureCameras[0], uberReplacementShader, 0);
+		SetupCameraWithReplacementShader(captureCameras[1], uberReplacementShader, 1);
 
-		SetupCameraWithPostShader(captureCameras[2], depthPassMaterial, DepthTextureMode.Depth);
-		SetupCameraWithPostShader(captureCameras[3], opticalFlowPassMaterial, DepthTextureMode.Depth | DepthTextureMode.MotionVectors);
+		//SetupCameraWithPostShader(captureCameras[2], depthPassMaterial, DepthTextureMode.Depth);
+		//SetupCameraWithPostShader(captureCameras[2], depthPassMaterial, DepthTextureMode.DepthNormals);
+		SetupCameraWithReplacementShader(captureCameras[2], uberReplacementShader, 2, Color.white);
+		SetupCameraWithPostShader(captureCameras[3], depthPassMaterial, DepthTextureMode.Depth);
+		//SetupCameraWithPostShader(captureCameras[3], opticalFlowPassMaterial, DepthTextureMode.Depth | DepthTextureMode.MotionVectors);
+
+		//SetupCameraWithReplacementAndPostShader(captureCameras[4], depthPassMaterial, depthNormalsShader);
+		SetupCameraWithReplacementShader(captureCameras[4], uberReplacementShader, 3);
+
+		
+
 	}
+
 
 	public void OnSceneChange()
 	{
@@ -164,12 +199,48 @@ public class ImageSynthesis : MonoBehaviour {
 
 	private void Save(string filenameWithoutExtension, string filenameExtension, int width, int height)
 	{
+		RenderCustomDepthNormals();
+
 		var mainCamera = GetComponent<Camera>();
 		Save(mainCamera, filenameWithoutExtension + PassNames[0] + filenameExtension, width, height);
-
+		
 		foreach (var cam in captureCameras)
 			Save(cam, filenameWithoutExtension + cam.name + filenameExtension, width, height);
 	}
+
+	private RenderTexture customCameraDepthNormalsTexture;
+	private void RenderCustomDepthNormals()
+	{
+		var mainCamera = GetComponent<Camera>();
+
+		if (customCameraDepthNormalsTexture)
+			RenderTexture.ReleaseTemporary(customCameraDepthNormalsTexture);
+		customCameraDepthNormalsTexture = RenderTexture.GetTemporary(
+			mainCamera.pixelWidth, mainCamera.pixelHeight, 24,
+			RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+
+		var prevActiveRT = RenderTexture.active;
+		var prevCameraRT = mainCamera.targetTexture;
+
+		// render to offscreen texture (readonly from CPU side)
+		RenderTexture.active = customCameraDepthNormalsTexture;
+		mainCamera.targetTexture = customCameraDepthNormalsTexture;
+
+		Color prevBGColor = mainCamera.backgroundColor;
+		CameraClearFlags prevClearFlags = mainCamera.clearFlags;
+		mainCamera.backgroundColor = new Color(.5f,.5f, 1, 1);
+		mainCamera.clearFlags = CameraClearFlags.SolidColor;
+		mainCamera.RenderWithShader(depthNormalsShader, "");
+		mainCamera.backgroundColor = prevBGColor;
+		mainCamera.clearFlags = prevClearFlags;
+
+		// restore state and cleanup
+		mainCamera.targetTexture = prevCameraRT;
+		RenderTexture.active = prevActiveRT;
+
+		Shader.SetGlobalTexture("_CustomCameraDepthNormalsTexture", customCameraDepthNormalsTexture);
+	}
+
 
 	private void Save(Camera cam, string filename, int width, int height)
 	{
@@ -185,6 +256,8 @@ public class ImageSynthesis : MonoBehaviour {
 		// render to offscreen texture (readonly from CPU side)
 		RenderTexture.active = renderRT;
 		cam.targetTexture = renderRT;
+
+		//Shader.SetGlobalTexture("_CustomCameraDepthNormalsTexture", customCameraDepthNormalsTexture);
 		cam.Render();
 
 		// blit to rescale (see issue with Motion Vectors in @KNOWN ISSUES)
