@@ -8,15 +8,15 @@ Properties {
 	_Color ("", Color) = (1,1,1,1)
 
 	_ObjectColor ("Object Color", Color) = (1,1,1,1)
-	_ClusterColor ("Cluster Color", Color) = (0,1,0,1)
+	_CategoryColor ("Catergory Color", Color) = (0,1,0,1)
 }
 
 SubShader {
 CGINCLUDE
 
 fixed4 _ObjectColor;
-fixed4 _ClusterColor;
-int _Source;
+fixed4 _CategoryColor;
+int _OutputMode;
 
 // remap depth: [0 @ eye .. 1 @ far] => [0 @ near .. 1 @ far]
 inline float Linear01FromEyeToLinear01FromNear(float depth01)
@@ -28,33 +28,43 @@ inline float Linear01FromEyeToLinear01FromNear(float depth01)
 
 float4 Output(float depth01, float3 normal)
 {
-	if (_Source == 0)
+	/* see ImageSynthesis.cs
+	enum ReplacelementModes {
+		ObjectId 			= 0,
+		CatergoryId			= 1,
+		DepthCompressed		= 2,
+		DepthMultichannel	= 3,
+		Normals				= 4
+	};*/
+
+	if (_OutputMode == 0) // ObjectId
 	{
 		return _ObjectColor;
 	}
-	else if (_Source == 1)
+	else if (_OutputMode == 1) // CatergoryId
 	{
-		return _ClusterColor;
+		return _CategoryColor;
 	}
-	else if (_Source == 2)
+	else if (_OutputMode == 2) // DepthCompressed
 	{
-		/*
-		float lowBits = frac(depth01 * 256);
-		float highBits = depth01 - lowBits / 256;
-		return float4(lowBits, highBits, depth01, 1);
-		*/
 		float linearZFromNear = Linear01FromEyeToLinear01FromNear(depth01); 
 		float k = 0.25; // compression factor
 		return pow(linearZFromNear, k);
 	}
-	else if (_Source == 3)
+	else if (_OutputMode == 3) // DepthMultichannel
+	{
+		float lowBits = frac(depth01 * 256);
+		float highBits = depth01 - lowBits / 256;
+		return float4(lowBits, highBits, depth01, 1);
+	}
+	else if (_OutputMode == 4) // Normals
 	{
 		// [-1 .. 1] => [0 .. 1]
 		float3 c = normal * 0.5 + 0.5;
 		return float4(c, 1);
 	}
 
-	// unsupported _Source
+	// unsupported _OutputMode
 	return float4(1, 0.5, 0.5, 1);
 }
 ENDCG

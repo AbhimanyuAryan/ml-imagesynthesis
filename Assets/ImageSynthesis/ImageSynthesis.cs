@@ -18,6 +18,14 @@ using System.IO;
 
 [RequireComponent (typeof(Camera))]
 public class ImageSynthesis : MonoBehaviour {
+
+	enum ReplacelementModes {
+		ObjectId 			= 0,
+		CatergoryId			= 1,
+		DepthCompressed		= 2,
+		DepthMultichannel	= 3,
+		Normals				= 4
+	};
 	
 	static readonly string[] PassNames = { "_img", "_id", "_layer", "_depth", "_flow", "_normals" };
 	private Camera[] captureCameras = new Camera[PassNames.Length - 1];
@@ -68,15 +76,15 @@ public class ImageSynthesis : MonoBehaviour {
 	}
 
 
-	static private void SetupCameraWithReplacementShader(Camera cam, Shader shader, int source = 0)
+	static private void SetupCameraWithReplacementShader(Camera cam, Shader shader, ReplacelementModes mode)
 	{
-		SetupCameraWithReplacementShader(cam, shader, source, Color.black);
+		SetupCameraWithReplacementShader(cam, shader, mode, Color.black);
 	}
 
-	static private void SetupCameraWithReplacementShader(Camera cam, Shader shader, int source, Color clearColor)
+	static private void SetupCameraWithReplacementShader(Camera cam, Shader shader, ReplacelementModes mode, Color clearColor)
 	{
 		var cb = new CommandBuffer();
-		cb.SetGlobalFloat("_Source", source); // @TODO: CommandBuffer is missing SetGlobalInt() method
+		cb.SetGlobalFloat("_OutputMode", (int)mode); // @TODO: CommandBuffer is missing SetGlobalInt() method
 		cam.AddCommandBuffer(CameraEvent.BeforeForwardOpaque, cb);
 		cam.AddCommandBuffer(CameraEvent.BeforeFinalPass, cb);
 		cam.SetReplacementShader(shader, "");
@@ -113,10 +121,10 @@ public class ImageSynthesis : MonoBehaviour {
 		opticalFlowMaterial.SetFloat("_Sensitivity", opticalFlowSensitivity);
 
 		// setup command buffers and replacement shaders
-		SetupCameraWithReplacementShader(captureCameras[0], uberReplacementShader, 0);
-		SetupCameraWithReplacementShader(captureCameras[1], uberReplacementShader, 1);
-		SetupCameraWithReplacementShader(captureCameras[2], uberReplacementShader, 2, Color.white);
-		SetupCameraWithReplacementShader(captureCameras[3], uberReplacementShader, 3);
+		SetupCameraWithReplacementShader(captureCameras[0], uberReplacementShader, ReplacelementModes.ObjectId);
+		SetupCameraWithReplacementShader(captureCameras[1], uberReplacementShader, ReplacelementModes.CatergoryId);
+		SetupCameraWithReplacementShader(captureCameras[2], uberReplacementShader, ReplacelementModes.DepthCompressed, Color.white);
+		SetupCameraWithReplacementShader(captureCameras[3], uberReplacementShader, ReplacelementModes.Normals);
 		SetupCameraWithPostShader(captureCameras[4], opticalFlowMaterial,DepthTextureMode.Depth | DepthTextureMode.MotionVectors);
 	}
 
@@ -132,7 +140,7 @@ public class ImageSynthesis : MonoBehaviour {
 			var tag = r.gameObject.tag;
 
 			mpb.SetColor("_ObjectColor", ColorEncoding.EncodeIDAsColor(id));
-			mpb.SetColor("_ClusterColor", ColorEncoding.EncodeLayerAsColor(layer));
+			mpb.SetColor("_CategoryColor", ColorEncoding.EncodeLayerAsColor(layer));
 			r.SetPropertyBlock(mpb);
 		}
 	}
