@@ -15,7 +15,7 @@ This repository contains code that is [easy to add to any existing Unity project
 * __Object categorization__ - objects are assigned color based on their category
 * __Optical flow__ - pixels are colored according to their motion in the relation to camera
 * __Depth__ - pixels are colored according to their distance from the camera
-* __Normals__ - coming soon!
+* __Normals__ - surfaces are colored according to their angle towards the camera 
 * *... and more in the future*
 
 ![Readme_DescriptionMainImage.png](https://bitbucket.org/repo/5KgjLE/images/1913953980-Readme_DescriptionMainImage.png)
