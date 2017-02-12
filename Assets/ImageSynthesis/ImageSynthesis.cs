@@ -19,17 +19,25 @@ using System.IO;
 [RequireComponent (typeof(Camera))]
 public class ImageSynthesis : MonoBehaviour {
 
-	enum ReplacelementModes {
-		ObjectId 			= 0,
-		CatergoryId			= 1,
-		DepthCompressed		= 2,
-		DepthMultichannel	= 3,
-		Normals				= 4
+	// pass configuration
+	private CapturePass[] capturePasses = new CapturePass[] {
+		new CapturePass() { name = "_img", supportsAntialiasing = true },
+		new CapturePass() { name = "_id", supportsAntialiasing = false },
+		new CapturePass() { name = "_layer", supportsAntialiasing = false },
+		new CapturePass() { name = "_depth", supportsAntialiasing = true },
+		new CapturePass() { name = "_normals", supportsAntialiasing = true },
+		new CapturePass() { name = "_flow", supportsAntialiasing = false }
+	};
+
+	struct CapturePass {
+		// configuration
+		public string name;
+		public bool supportsAntialiasing;
+
+		// impl
+		public Camera camera;
 	};
 	
-	static readonly string[] PassNames = { "_img", "_id", "_layer", "_depth", "_normals", "_flow" };
-	private Camera[] captureCameras = new Camera[PassNames.Length - 1];
-
 	public Shader uberReplacementShader;
 	public Shader opticalFlowShader;
 
@@ -47,8 +55,10 @@ public class ImageSynthesis : MonoBehaviour {
 		if (!opticalFlowShader)
 			opticalFlowShader = Shader.Find("Hidden/OpticalFlow");
 
-		for (int q = 0; q < captureCameras.Length; q++)
-			captureCameras[q] = CreateHiddenCamera (PassNames[q + 1]);
+		// use real camera to capture final image
+		capturePasses[0].camera = GetComponent<Camera>();
+		for (int q = 1; q < capturePasses.Length; q++)
+			capturePasses[q].camera = CreateHiddenCamera (capturePasses[q].name);
 
 		OnCameraChange();
 		OnSceneChange();
@@ -100,19 +110,31 @@ public class ImageSynthesis : MonoBehaviour {
 		cam.depthTextureMode = depthTextureMode;
 	}
 
+	enum ReplacelementModes {
+		ObjectId 			= 0,
+		CatergoryId			= 1,
+		DepthCompressed		= 2,
+		DepthMultichannel	= 3,
+		Normals				= 4
+	};
+
 	public void OnCameraChange()
 	{
 		int targetDisplay = 1;
-		foreach (var cam in captureCameras)
+		var mainCamera = GetComponent<Camera>();
+		foreach (var pass in capturePasses)
 		{
+			if (pass.camera == mainCamera)
+				continue;
+
 			// cleanup capturing camera
-			cam.RemoveAllCommandBuffers();
+			pass.camera.RemoveAllCommandBuffers();
 
 			// copy all "main" camera parameters into capturing camera
-			cam.CopyFrom(GetComponent<Camera>());
+			pass.camera.CopyFrom(mainCamera);
 
 			// set targetDisplay here since it gets overriden by CopyFrom()
-			cam.targetDisplay = targetDisplay++;
+			pass.camera.targetDisplay = targetDisplay++;
 		}
 
 		// cache materials and setup material properties
@@ -121,11 +143,11 @@ public class ImageSynthesis : MonoBehaviour {
 		opticalFlowMaterial.SetFloat("_Sensitivity", opticalFlowSensitivity);
 
 		// setup command buffers and replacement shaders
-		SetupCameraWithReplacementShader(captureCameras[0], uberReplacementShader, ReplacelementModes.ObjectId);
-		SetupCameraWithReplacementShader(captureCameras[1], uberReplacementShader, ReplacelementModes.CatergoryId);
-		SetupCameraWithReplacementShader(captureCameras[2], uberReplacementShader, ReplacelementModes.DepthCompressed, Color.white);
-		SetupCameraWithReplacementShader(captureCameras[3], uberReplacementShader, ReplacelementModes.Normals);
-		SetupCameraWithPostShader(captureCameras[4], opticalFlowMaterial,DepthTextureMode.Depth | DepthTextureMode.MotionVectors);
+		SetupCameraWithReplacementShader(capturePasses[1].camera, uberReplacementShader, ReplacelementModes.ObjectId);
+		SetupCameraWithReplacementShader(capturePasses[2].camera, uberReplacementShader, ReplacelementModes.CatergoryId);
+		SetupCameraWithReplacementShader(capturePasses[3].camera, uberReplacementShader, ReplacelementModes.DepthCompressed, Color.white);
+		SetupCameraWithReplacementShader(capturePasses[4].camera, uberReplacementShader, ReplacelementModes.Normals);
+		SetupCameraWithPostShader(capturePasses[5].camera, opticalFlowMaterial, DepthTextureMode.Depth | DepthTextureMode.MotionVectors);
 	}
 
 
@@ -173,17 +195,16 @@ public class ImageSynthesis : MonoBehaviour {
 
 	private void Save(string filenameWithoutExtension, string filenameExtension, int width, int height)
 	{
-		var mainCamera = GetComponent<Camera>();
-		Save(mainCamera, filenameWithoutExtension + PassNames[0] + filenameExtension, width, height);
-		
-		foreach (var cam in captureCameras)
-			Save(cam, filenameWithoutExtension + cam.name + filenameExtension, width, height);
+		foreach (var pass in capturePasses)
+			Save(pass.camera, filenameWithoutExtension + pass.name + filenameExtension, width, height, pass.supportsAntialiasing);
 	}
 
-	private void Save(Camera cam, string filename, int width, int height)
+	private void Save(Camera cam, string filename, int width, int height, bool supportsAntialiasing)
 	{
 		var mainCamera = GetComponent<Camera>();
-		var renderRT = RenderTexture.GetTemporary(mainCamera.pixelWidth, mainCamera.pixelHeight, 24);
+		var antiAliasing = (supportsAntialiasing) ? QualitySettings.antiAliasing : 1;
+		var renderRT = RenderTexture.GetTemporary(mainCamera.pixelWidth, mainCamera.pixelHeight, 24,
+			RenderTextureFormat.Default, RenderTextureReadWrite.Default, Mathf.Max(1, antiAliasing));
 	
 		var saveRT = RenderTexture.GetTemporary(width, height, 24);
 		var tex = new Texture2D(width, height, TextureFormat.RGB24, false);
