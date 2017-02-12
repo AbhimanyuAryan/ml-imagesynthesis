@@ -14,25 +14,26 @@ using System.IO;
 // . Motion Vectors can produce incorrect results in Unity 5.5.f3 when
 //      1) during the first rendering frame
 //      2) rendering several cameras with different aspect ratios - vectors do stretch to the sides of the screen
-// . Depth is not anti-aliased atlhough the main image is.
 
 [RequireComponent (typeof(Camera))]
 public class ImageSynthesis : MonoBehaviour {
 
 	// pass configuration
 	private CapturePass[] capturePasses = new CapturePass[] {
-		new CapturePass() { name = "_img", supportsAntialiasing = true },
+		new CapturePass() { name = "_img" },
 		new CapturePass() { name = "_id", supportsAntialiasing = false },
 		new CapturePass() { name = "_layer", supportsAntialiasing = false },
-		new CapturePass() { name = "_depth", supportsAntialiasing = true },
-		new CapturePass() { name = "_normals", supportsAntialiasing = true },
-		new CapturePass() { name = "_flow", supportsAntialiasing = false }
+		new CapturePass() { name = "_depth" },
+		new CapturePass() { name = "_normals" },
+		new CapturePass() { name = "_flow", supportsAntialiasing = false, needsRescale = true } // (see issue with Motion Vectors in @KNOWN ISSUES)
 	};
 
 	struct CapturePass {
 		// configuration
 		public string name;
 		public bool supportsAntialiasing;
+		public bool needsRescale;
+		public CapturePass(string name_) { name = name_; supportsAntialiasing = true; needsRescale = false; camera = null; }
 
 		// impl
 		public Camera camera;
@@ -196,17 +197,21 @@ public class ImageSynthesis : MonoBehaviour {
 	private void Save(string filenameWithoutExtension, string filenameExtension, int width, int height)
 	{
 		foreach (var pass in capturePasses)
-			Save(pass.camera, filenameWithoutExtension + pass.name + filenameExtension, width, height, pass.supportsAntialiasing);
+			Save(pass.camera, filenameWithoutExtension + pass.name + filenameExtension, width, height, pass.supportsAntialiasing, pass.needsRescale);
 	}
 
-	private void Save(Camera cam, string filename, int width, int height, bool supportsAntialiasing)
+	private void Save(Camera cam, string filename, int width, int height, bool supportsAntialiasing, bool needsRescale)
 	{
 		var mainCamera = GetComponent<Camera>();
-		var antiAliasing = (supportsAntialiasing) ? QualitySettings.antiAliasing : 1;
-		var renderRT = RenderTexture.GetTemporary(mainCamera.pixelWidth, mainCamera.pixelHeight, 24,
-			RenderTextureFormat.Default, RenderTextureReadWrite.Default, Mathf.Max(1, antiAliasing));
-	
-		var saveRT = RenderTexture.GetTemporary(width, height, 24);
+		var depth = 24;
+		var format = RenderTextureFormat.Default;
+		var readWrite = RenderTextureReadWrite.Default;
+		var antiAliasing = (supportsAntialiasing) ? Mathf.Max(1, QualitySettings.antiAliasing) : 1;
+
+		var finalRT =
+			RenderTexture.GetTemporary(width, height, depth, format, readWrite, antiAliasing);
+		var renderRT = (!needsRescale) ? finalRT :
+			RenderTexture.GetTemporary(mainCamera.pixelWidth, mainCamera.pixelHeight, depth, format, readWrite, antiAliasing);
 		var tex = new Texture2D(width, height, TextureFormat.RGB24, false);
 
 		var prevActiveRT = RenderTexture.active;
@@ -218,9 +223,13 @@ public class ImageSynthesis : MonoBehaviour {
 
 		cam.Render();
 
-		// blit to rescale (see issue with Motion Vectors in @KNOWN ISSUES)
-		RenderTexture.active = saveRT;
-		Graphics.Blit(renderRT, saveRT);
+		if (needsRescale)
+		{
+			// blit to rescale (see issue with Motion Vectors in @KNOWN ISSUES)
+			RenderTexture.active = finalRT;
+			Graphics.Blit(renderRT, finalRT);
+			RenderTexture.ReleaseTemporary(renderRT);
+		}
 
 		// read offsreen texture contents into the CPU readable texture
 		tex.ReadPixels(new Rect(0, 0, tex.width, tex.height), 0, 0);
@@ -235,8 +244,7 @@ public class ImageSynthesis : MonoBehaviour {
 		RenderTexture.active = prevActiveRT;
 
 		Object.Destroy(tex);
-		RenderTexture.ReleaseTemporary(renderRT);
-		RenderTexture.ReleaseTemporary(saveRT);
+		RenderTexture.ReleaseTemporary(finalRT);
 	}
 
 	#if UNITY_EDITOR
