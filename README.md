@@ -19,8 +19,8 @@ This repository contains code that is [easy to add to any existing Unity project
 * *... and more in the future*
 
 ![Readme_DescriptionMainImageNew.jpg](https://bitbucket.org/repo/5KgjLE/images/2557031440-Readme_DescriptionMainImageNew.jpg)
-![Readme_DescriptionMainImage.png](https://bitbucket.org/repo/5KgjLE/images/1913953980-Readme_DescriptionMainImage.png)
 ![Readme_Description4Passes.png](https://bitbucket.org/repo/5KgjLE/images/3420646604-Readme_Description4Passes.png)
+*(Assets used in the image above are courtesy of [FINWARD STUDIOS](http://www.finwardstudios.com) and not included in this repository. You can obtain this package from [Asset Store](http://u3d.as/BaG))*
 
 ### Wiki ###
 * [How to use it in the existing project](../../wiki/Installation)
